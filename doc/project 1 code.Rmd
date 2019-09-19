@@ -1,0 +1,120 @@
+---
+title: "ADS-project1"
+author: "nyuchai nc2774"
+date: "12/09/2019"
+output: pdf_document
+---
+
+A. Processed Data
+```{r}
+library(wordcloud2)
+library(ggplot2)
+load("~/Desktop/columbia/5234 ads/project 1/lyrics.RData")
+
+all_word <- lapply(dt_lyrics$stemmedwords, function(x){
+  strsplit(x,' ')
+})
+
+to_score <- all_word
+
+all_word <- unlist(all_word)
+
+count_word <-data.frame(table(all_word))
+count_word<- count_word[order(count_word$Freq,decreasing = TRUE),]
+
+plot_word <- subset(count_word,count_word$Freq>=20)
+frequency_data <- plot_word[order(plot_word$Freq,decreasing = TRUE),][1:30,]
+####wordcloud
+wordcloud2(plot_word)
+####the first 30 words  histogram
+ggplot(frequency_data, aes(x = reorder(all_word,Freq), y = Freq)) +
+  geom_bar(stat ="identity")+coord_flip()
+
+#sentiment analysis
+positives= readLines("positive-words.txt")
+negatives = readLines("negative-words.txt")
+
+# Let's have error handling function when trying tolower
+tryTolower = function(x){
+  # create missing value
+  y = NA
+  # tryCatch error
+  try_error = tryCatch(tolower(x), error=function(e) e)
+  # if not an error
+  if (!inherits(try_error, "error"))
+    y = tolower(x)
+  # result
+  return(y)
+}
+
+scores = lapply(to_score,function(songs, positive_words=positives, negative_words=negatives){
+                 songs = sapply(songs, tryTolower)
+                 # compare words to the dictionaries of positive & negative terms
+                 positive.matches = match(songs, positive_words)
+                 negative.matches = match(songs, negative_words)
+                 # get the position of the matched term or NA
+                 # we just want a TRUE/FALSE
+                 positive_matches = !is.na(positive.matches)
+                 negative_matches = !is.na(negative.matches)
+                 # final score
+                 score = sum(positive_matches) - sum(negative_matches)
+                 return(score)
+               })
+
+score <- unlist(scores)
+
+##?????????-40???40????????????
+plot_score <- score[score>=-40&score<=40]
+theplot <-data.frame(data=plot_score) 
+ggplot(theplot,aes(x=data)) + geom_histogram(binwidth=1) + ggtitle("Sentiment of stemmedwords")
+```
+
+I. Wordcloud and Word Frequency
+Wordcloud visualizations make it easy to read and understand the most prominent term.
+
+At first, we used processed lyrics data to produce wordcloud.The most frequent words are love, time, baby, life and heart. Additionally, love takes a large part of lyrics. This result is highly accordance with our daily life. For most people, we need to release our emotions through music.
+
+Second, i plot the frequencies of most common 30 words. The results are quite similar from wordcloud and my plot. 
+
+
+
+II. Sentiment Analysis
+
+When i listen to a song, it's really interesting to find its sentiment like positive or negative. 
+Therefore, i did sentiment analysis to see if there is a huge difference between positive sentiment lyrics or negative sentiment lyrics. And i categorize the positive sentiment if the score is greater than or equal to 40 and neutral sentiment if its score is 0 and negative sentiment if the score is smaller than 0.
+
+From the plot, we can conclude that since our data is really large, the positive sentiment lyrics occupy approximately 50% of total lyrics and negative sentiment has the same result. But it looks like negative lyrics take more proportion in total lyrics.
+
+
+
+B. Original Data
+
+Then Produce the wordcloud and word frequency of original data which is unprocessed data.
+```{r}
+####origin data
+load("original_lyrics.RData")
+
+all_word <- lapply(dt_lyrics$lyrics, function(x){
+  strsplit(x,' ')
+})
+
+all_word <- unlist(all_word)
+
+count_word <-data.frame(table(all_word))
+count_word<- count_word[order(count_word$Freq,decreasing = TRUE),]
+
+plot_word <- subset(count_word,count_word$Freq>=20)
+frequency_data <- plot_word[order(plot_word$Freq,decreasing = TRUE),][1:30,]
+####wordcloud
+wordcloud2(plot_word)
+####the first 30 words  histogram
+ggplot(frequency_data, aes(x = reorder(all_word,Freq), y = Freq)) +
+  geom_bar(stat ="identity")+coord_flip()
+
+```
+
+From the result of wordcloud, we can see the most common words of unprocessed data are the,and,you,of or to and so on. I believe those words cannot release the true feelings from lyrics. However,those words are neccessary parts in every song so it's reasonable to see them a large portion in our lyrics data. 
+In addition, the word frequency plot also explains the same results.
+
+C. Summary
+In summary, lyrics indeed plays a large part in human life. People can release their emotions through lyrics no matter positive sentiment or negative sentiment. Lyrics is not just plain words but a solace to this complicated world.
